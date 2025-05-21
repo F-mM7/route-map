@@ -4,6 +4,7 @@ import shinjukuLine from "./lines/shinjukuLine";
 import odakyuLine from "./lines/odakyuLine";
 import inokashiraLine from "./lines/inokashiraLine";
 import chuoSobuLine from "./lines/chuoSobuLine";
+import yamanoteLine from "./lines/yamanoteLine"; // 追加
 
 // 路線データ（駅リスト・色など）をまとめて管理
 const lines = {
@@ -12,6 +13,7 @@ const lines = {
   小田急線: odakyuLine,
   井の頭線: inokashiraLine,
   中央総武線: chuoSobuLine,
+  山手線: yamanoteLine, // 追加
   // 今後追加したい路線はここに追加
 };
 
@@ -62,13 +64,17 @@ function latLngToSvg(lat: number, lng: number) {
   return { x, y };
 }
 
-// パン（ドラッグ）範囲をズームに応じて制限
+// パン（ドラッグ）範囲をズームに応じて制限（ズーム中心を維持し、ズーム倍率に応じて正しく制限）
 function clampOffset(offset: { x: number; y: number }, zoom: number) {
-  const maxX = (VIEW_WIDTH * (zoom - 1)) / 2;
-  const maxY = (VIEW_HEIGHT * (zoom - 1)) / 2;
+  // ズーム時の可視領域サイズ
+  const visibleWidth = VIEW_WIDTH / zoom;
+  const visibleHeight = VIEW_HEIGHT / zoom;
+  // パンの最大値（ズーム中心を維持し、ズーム倍率に応じて正しく制限）
+  const maxX = (VIEW_WIDTH - visibleWidth) / 2 / zoom;
+  const maxY = (VIEW_HEIGHT - visibleHeight) / 2 / zoom;
   return {
-    x: Math.max(-maxX, Math.min(maxX, offset.x)),
-    y: Math.max(-maxY, Math.min(maxY, offset.y)),
+    x: Math.min(maxX, Math.max(-maxX, offset.x)),
+    y: Math.min(maxY, Math.max(-maxY, offset.y)),
   };
 }
 
