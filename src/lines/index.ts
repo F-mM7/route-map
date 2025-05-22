@@ -12,7 +12,6 @@ const lines = {
   井の頭線: inokashiraLine,
   中央総武線: chuoSobuLine,
   山手線: yamanoteLine,
-  // 今後追加したい路線はここに追加
 };
 
 export default lines;

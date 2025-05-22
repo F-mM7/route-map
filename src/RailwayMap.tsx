@@ -1,11 +1,9 @@
 import React, { useRef, useState } from "react";
 import lines from "./lines";
 
-// 表示領域サイズ（縦横別々に指定可能）
-const VIEW_WIDTH = 700;
-const VIEW_HEIGHT = 700;
+const VIEW_WIDTH = 1024;
+const VIEW_HEIGHT = 1024;
 
-// 全駅の緯度経度範囲を自動計算
 function getLatLngBounds() {
   let minLat = Infinity,
     maxLat = -Infinity,
@@ -24,9 +22,7 @@ function getLatLngBounds() {
 
 const bounds = getLatLngBounds();
 
-// 緯度経度をSVG座標に変換（全駅が必ず収まるようにスケーリング＆中央寄せ）
 function latLngToSvg(lat: number, lng: number) {
-  // 地理的範囲（全駅分）
   const { minLat, maxLat, minLng, maxLng } = bounds;
   // 東京付近の緯度1度と経度1度の距離比（cos緯度で補正）
   const latCenter = (minLat + maxLat) / 2;
@@ -50,12 +46,17 @@ function latLngToSvg(lat: number, lng: number) {
 
 // パン（ドラッグ）範囲をズームに応じて制限（ズーム中心を維持し、ズーム倍率に応じて正しく制限）
 function clampOffset(offset: { x: number; y: number }, zoom: number) {
-  // ズーム時の可視領域サイズ
   const visibleWidth = VIEW_WIDTH / zoom;
   const visibleHeight = VIEW_HEIGHT / zoom;
-  // パンの最大値（ズーム中心を維持し、ズーム倍率に応じて正しく制限）
-  const maxX = (VIEW_WIDTH - visibleWidth) / 2 / zoom;
-  const maxY = (VIEW_HEIGHT - visibleHeight) / 2 / zoom;
+
+  // 地図全体の幅と高さ
+  const mapWidth = VIEW_WIDTH;
+  const mapHeight = VIEW_HEIGHT;
+
+  // オフセットの最大・最小値を計算
+  const maxX = (mapWidth - visibleWidth) / 2;
+  const maxY = (mapHeight - visibleHeight) / 2;
+
   return {
     x: Math.min(maxX, Math.max(-maxX, offset.x)),
     y: Math.min(maxY, Math.max(-maxY, offset.y)),
@@ -67,17 +68,6 @@ const RailwayMap: React.FC = () => {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
-
-  // ホイールでズーム
-  const handleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
-    e.preventDefault();
-    const scale = e.deltaY < 0 ? 1.1 : 0.9;
-    setZoom((z) => {
-      const nextZoom = Math.max(1, Math.min(5, z * scale));
-      if (nextZoom === 1) setOffset({ x: 0, y: 0 });
-      return nextZoom;
-    });
-  };
 
   // ドラッグでパン（範囲制限あり）
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -101,6 +91,34 @@ const RailwayMap: React.FC = () => {
     setOffset((prev) => clampOffset(prev, zoom));
   }, [zoom]);
 
+  React.useEffect(() => {
+    const svgElement = document.querySelector("svg");
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const svgRect = svgElement!.getBoundingClientRect();
+      const mouseX = e.clientX - svgRect.left;
+      const mouseY = e.clientY - svgRect.top;
+      const scale = e.deltaY < 0 ? 1.1 : 0.9;
+
+      setZoom((z) => {
+        const nextZoom = Math.max(1, Math.min(5, z * scale));
+        setOffset((prev) => {
+          const zoomFactor = nextZoom / z;
+          const dx = (mouseX - VIEW_WIDTH / 2 - prev.x) * (1 - zoomFactor);
+          const dy = (mouseY - VIEW_HEIGHT / 2 - prev.y) * (1 - zoomFactor);
+          const newOffset = { x: prev.x + dx, y: prev.y + dy };
+          return clampOffset(newOffset, nextZoom);
+        });
+        return nextZoom;
+      });
+    };
+
+    svgElement?.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      svgElement?.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
+
   return (
     <svg
       width={VIEW_WIDTH}
@@ -112,7 +130,6 @@ const RailwayMap: React.FC = () => {
         cursor: dragging ? "grabbing" : "grab",
         userSelect: "none",
       }}
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
