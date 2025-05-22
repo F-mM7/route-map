@@ -1,9 +1,12 @@
 import React from "react";
 import { useZoomPan } from "./hooks/useZoomPan";
 import lines from "./lines";
+import Polyline from "./components/Polyline";
 
 const VIEW_WIDTH = 1024;
 const VIEW_HEIGHT = 1024;
+const backgroundColor = "white";
+const textColor = "black";
 
 function getLatLngBounds() {
   let minLat = Infinity,
@@ -60,9 +63,7 @@ const RailwayMap: React.FC = () => {
       width={VIEW_WIDTH}
       height={VIEW_HEIGHT}
       style={{
-        background: "#f9f9f9",
-        border: "1px solid #ccc",
-        marginBottom: 32,
+        background: backgroundColor,
         cursor: dragging ? "grabbing" : "grab",
         userSelect: "none",
       }}
@@ -74,16 +75,10 @@ const RailwayMap: React.FC = () => {
       <g transform={`translate(${offset.x},${offset.y}) scale(${zoom})`}>
         {Object.entries(lines).map(([lineName, line]) => (
           <g key={lineName}>
-            <polyline
-              fill="none"
-              stroke={line.color}
-              strokeWidth={4}
-              points={line.stations
-                .map((st) => {
-                  const { x, y } = latLngToSvg(st.lat, st.lng);
-                  return `${x},${y}`;
-                })
-                .join(" ")}
+            <Polyline
+              color={line.color}
+              stations={line.stations}
+              latLngToSvg={latLngToSvg}
             />
             {line.stations.map((station) => {
               const { x, y } = latLngToSvg(station.lat, station.lng);
@@ -93,17 +88,11 @@ const RailwayMap: React.FC = () => {
                     cx={x}
                     cy={y}
                     r={8}
-                    fill="#fff"
+                    fill={backgroundColor}
                     stroke={line.color}
                     strokeWidth={3}
                   />
-                  <text
-                    x={x + 12}
-                    y={y + 4}
-                    fontSize={14}
-                    fill="#333"
-                    fontFamily="sans-serif"
-                  >
+                  <text x={x + 9} y={y + 5} fontSize={16} fill={textColor}>
                     {station.name}
                   </text>
                 </g>
