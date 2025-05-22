@@ -1,21 +1,5 @@
 import React, { useRef, useState } from "react";
-import mitaLine from "./lines/mitaLine";
-import shinjukuLine from "./lines/shinjukuLine";
-import odakyuLine from "./lines/odakyuLine";
-import inokashiraLine from "./lines/inokashiraLine";
-import chuoSobuLine from "./lines/chuoSobuLine";
-import yamanoteLine from "./lines/yamanoteLine"; // 追加
-
-// 路線データ（駅リスト・色など）をまとめて管理
-const lines = {
-  三田線: mitaLine,
-  新宿線: shinjukuLine,
-  小田急線: odakyuLine,
-  井の頭線: inokashiraLine,
-  中央総武線: chuoSobuLine,
-  山手線: yamanoteLine, // 追加
-  // 今後追加したい路線はここに追加
-};
+import lines from "./lines";
 
 // 表示領域サイズ（縦横別々に指定可能）
 const VIEW_WIDTH = 700;
