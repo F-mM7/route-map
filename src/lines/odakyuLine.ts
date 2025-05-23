@@ -1,4 +1,5 @@
 const odakyuLine = {
+  name: "小田急線",
   color: "#00a7db",
   stations: [
     { name: "新宿", lat: 35.690921, lng: 139.700257 },
@@ -28,7 +29,6 @@ const odakyuLine = {
     { name: "鶴川", lat: 35.603003, lng: 139.484003 },
     { name: "玉川学園前", lat: 35.606003, lng: 139.472003 },
     { name: "町田", lat: 35.546003, lng: 139.450003 },
-    // 必要に応じてさらに追加
   ],
 };
 

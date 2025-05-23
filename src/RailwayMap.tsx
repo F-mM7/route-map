@@ -2,6 +2,9 @@ import React from "react";
 import { useZoomPan } from "./hooks/useZoomPan";
 import lines from "./lines";
 import Polyline from "./components/Polyline";
+import StationMarkers from "./components/StationMarkers";
+import StationLabels from "./components/StationLabels";
+import type { Station } from "./types/Station";
 
 const VIEW_WIDTH = 1024;
 const VIEW_HEIGHT = 1024;
@@ -28,25 +31,30 @@ const bounds = getLatLngBounds();
 
 function latLngToSvg(lat: number, lng: number) {
   const { minLat, maxLat, minLng, maxLng } = bounds;
-  // 東京付近の緯度1度と経度1度の距離比（cos緯度で補正）
   const latCenter = (minLat + maxLat) / 2;
   const lngScale = Math.cos((latCenter * Math.PI) / 180);
 
-  // 地理的な幅・高さ（km相当の比率）
   const geoWidth = (maxLng - minLng) * lngScale;
   const geoHeight = maxLat - minLat;
-  // 表示領域に収めるスケール
   const scale = Math.min(VIEW_WIDTH / geoWidth, VIEW_HEIGHT / geoHeight);
 
-  // 余白（中央寄せ）
   const offsetX = (VIEW_WIDTH - geoWidth * scale) / 2;
   const offsetY = (VIEW_HEIGHT - geoHeight * scale) / 2;
 
-  // 緯度経度→SVG座標
   const x = offsetX + (lng - minLng) * lngScale * scale;
   const y = VIEW_HEIGHT - (offsetY + (lat - minLat) * scale);
   return { x, y };
 }
+
+const stationList: Station[] = Object.values(lines).flatMap((line) =>
+  line.stations.map((station) => ({
+    name: station.name,
+    lat: station.lat,
+    lng: station.lng,
+    line: line.name,
+    color: line.color,
+  }))
+);
 
 const RailwayMap: React.FC = () => {
   const {
@@ -80,26 +88,18 @@ const RailwayMap: React.FC = () => {
               stations={line.stations}
               latLngToSvg={latLngToSvg}
             />
-            {line.stations.map((station) => {
-              const { x, y } = latLngToSvg(station.lat, station.lng);
-              return (
-                <g key={station.name}>
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r={8}
-                    fill={backgroundColor}
-                    stroke={line.color}
-                    strokeWidth={3}
-                  />
-                  <text x={x + 9} y={y + 5} fontSize={16} fill={textColor}>
-                    {station.name}
-                  </text>
-                </g>
-              );
-            })}
           </g>
         ))}
+        <StationMarkers
+          stationList={stationList}
+          latLngToSvg={latLngToSvg}
+          backgroundColor={backgroundColor}
+        />
+        <StationLabels
+          stationList={stationList}
+          latLngToSvg={latLngToSvg}
+          textColor={textColor}
+        />
       </g>
     </svg>
   );

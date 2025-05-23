@@ -1,4 +1,5 @@
 const chuoSobuLine = {
+  name: "中央・総武線",
   color: "#f7d31d",
   stations: [
     { name: "三鷹", lat: 35.703097, lng: 139.560997 },

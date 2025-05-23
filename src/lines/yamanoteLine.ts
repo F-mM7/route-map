@@ -1,4 +1,5 @@
 const yamanoteLine = {
+  name: "山手線",
   color: "#9acd32",
   stations: [
     { name: "東京", lat: 35.681236, lng: 139.767125 },

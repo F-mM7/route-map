@@ -1,4 +1,5 @@
 const shinjukuLine = {
+  name: "新宿線",
   color: "#8dc21f",
   stations: [
     { name: "新宿", lat: 35.690921, lng: 139.700257 },

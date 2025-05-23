@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 
+// TODO めっちゃバグってる
+
 const VIEW_WIDTH = 1024;
 const VIEW_HEIGHT = 1024;
 
