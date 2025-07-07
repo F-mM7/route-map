@@ -52,22 +52,39 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
 
   const addStation = (station: string) => {
     if (!selectedStations.includes(station)) {
-      setSelectedStations([...selectedStations, station]);
+      const newStations = [...selectedStations, station];
+      setSelectedStations(newStations);
+      
+      // 自動検索実行
+      if (newStations.length >= 2) {
+        performSearch(newStations);
+      }
     }
     setInputValue('');
     setShowSuggestions(false);
   };
 
   const removeStation = (station: string) => {
-    setSelectedStations(selectedStations.filter(s => s !== station));
+    const newStations = selectedStations.filter(s => s !== station);
+    setSelectedStations(newStations);
+    
+    // 駅が2つ未満になったら、全体マップ表示に戻る
+    if (newStations.length < 2) {
+      onRoutesFound([]);
+    } else {
+      // 残りの駅で自動検索実行
+      performSearch(newStations);
+    }
   };
 
   const clearAllStations = () => {
     setSelectedStations([]);
+    // 全駅クリア時は全体マップ表示に戻る
+    onRoutesFound([]);
   };
 
-  const handleSearch = () => {
-    if (selectedStations.length < 2) {
+  const performSearch = (stations: string[]) => {
+    if (stations.length < 2) {
       setError('2つ以上の駅を選択してください');
       return;
     }
@@ -77,14 +94,14 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
     // 全ての駅ペアの組み合わせを計算
     const routes: Route[] = [];
     
-    for (let i = 0; i < selectedStations.length; i++) {
-      for (let j = i + 1; j < selectedStations.length; j++) {
-        const routeResult = findMinTransferRoute(selectedStations[i], selectedStations[j], distanceThreshold);
+    for (let i = 0; i < stations.length; i++) {
+      for (let j = i + 1; j < stations.length; j++) {
+        const routeResult = findMinTransferRoute(stations[i], stations[j], distanceThreshold);
         
         if (!routeResult.error) {
           routes.push({
-            from: selectedStations[i],
-            to: selectedStations[j],
+            from: stations[i],
+            to: stations[j],
             ...routeResult
           });
         }
@@ -102,6 +119,10 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
       });
       onRoutesFound(routes);
     }
+  };
+
+  const handleSearch = () => {
+    performSearch(selectedStations);
   };
 
   // 外側をクリックしたときに候補を非表示
@@ -230,22 +251,6 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
           ))}
         </div>
 
-        <button
-          onClick={handleSearch}
-          disabled={selectedStations.length < 2}
-          style={{
-            padding: `${spacing.sm} ${spacing.lg}`,
-            fontSize: fontSize.normal,
-            backgroundColor: selectedStations.length < 2 ? colors.button.disabled : colors.button.primary,
-            color: colors.button.primaryText,
-            border: 'none',
-            borderRadius: borderRadius.small,
-            cursor: selectedStations.length < 2 ? 'default' : 'pointer',
-            color: selectedStations.length < 2 ? colors.button.disabledText : colors.button.primaryText
-          }}
-        >
-          経路を検索
-        </button>
       </div>
 
       {error && (
