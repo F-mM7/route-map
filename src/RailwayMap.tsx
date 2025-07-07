@@ -114,7 +114,7 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      <g transform={`translate(${offset.x},${offset.y}) scale(${zoom})`}>
+      <g transform={`translate(${VIEW_WIDTH/2},${VIEW_HEIGHT/2}) scale(${zoom}) translate(${-VIEW_WIDTH/2 + offset.x},${-VIEW_HEIGHT/2 + offset.y})`}>
         {selectedRoutes.length === 0 ? (
           // 経路が選択されていない場合は全路線を表示
           <>

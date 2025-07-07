@@ -8,15 +8,25 @@ function clampOffset(offset: { x: number; y: number }, zoom: number) {
     return { x: 0, y: 0 };
   }
 
+  // SVG座標系では、transform="translate(x,y) scale(zoom)"により
+  // (0,0)が左上角から(offset.x, offset.y)に移動し、全体がzoom倍される
+  
+  // ズーム後の仮想コンテンツサイズ
   const scaledWidth = VIEW_WIDTH * zoom;
   const scaledHeight = VIEW_HEIGHT * zoom;
   
-  const maxX = (scaledWidth - VIEW_WIDTH) / 2;
-  const maxY = (scaledHeight - VIEW_HEIGHT) / 2;
+  // ビューポート(1024x1024)に対して、スケール後のコンテンツがはみ出る量
+  const overflowX = scaledWidth - VIEW_WIDTH;  // 横方向のはみ出し量
+  const overflowY = scaledHeight - VIEW_HEIGHT; // 縦方向のはみ出し量
+  
+  // パン可能範囲: はみ出した分だけ移動可能
+  // 正の値で左上方向、負の値で右下方向に移動
+  const maxPanX = overflowX / 2;
+  const maxPanY = overflowY / 2;
 
   return {
-    x: Math.min(maxX, Math.max(-maxX, offset.x)),
-    y: Math.min(maxY, Math.max(-maxY, offset.y)),
+    x: Math.max(-maxPanX, Math.min(maxPanX, offset.x)),
+    y: Math.max(-maxPanY, Math.min(maxPanY, offset.y)),
   };
 }
 
@@ -69,16 +79,26 @@ export function useZoomPan() {
             return { x: 0, y: 0 };
           }
           
+          // マウス位置を中心にズーム
           const zoomFactor = nextZoom / prevZoom;
           const centerX = VIEW_WIDTH / 2;
           const centerY = VIEW_HEIGHT / 2;
           
-          const dx = (mouseX - centerX - prevOffset.x) * (1 - zoomFactor);
-          const dy = (mouseY - centerY - prevOffset.y) * (1 - zoomFactor);
+          // マウス位置からビューポート中心への相対位置
+          const relativeX = mouseX - centerX;
+          const relativeY = mouseY - centerY;
+          
+          // ズーム前の実際のマウス位置（オフセット込み）
+          const worldMouseX = relativeX - prevOffset.x;
+          const worldMouseY = relativeY - prevOffset.y;
+          
+          // ズーム後に同じ世界座標を維持するための新しいオフセット
+          const newOffsetX = relativeX - worldMouseX * zoomFactor;
+          const newOffsetY = relativeY - worldMouseY * zoomFactor;
           
           return clampOffset({ 
-            x: prevOffset.x + dx, 
-            y: prevOffset.y + dy 
+            x: newOffsetX, 
+            y: newOffsetY 
           }, nextZoom);
         });
         
