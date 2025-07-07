@@ -43,10 +43,15 @@ function latLngToSvg(lat: number, lng: number) {
 
   const geoWidth = (maxLng - minLng) * lngScale;
   const geoHeight = maxLat - minLat;
-  const scale = Math.min(VIEW_WIDTH / geoWidth, VIEW_HEIGHT / geoHeight);
+  
+  const padding = 80;
+  const availableWidth = VIEW_WIDTH - padding * 2;
+  const availableHeight = VIEW_HEIGHT - padding * 2;
+  
+  const scale = Math.min(availableWidth / geoWidth, availableHeight / geoHeight);
 
-  const offsetX = (VIEW_WIDTH - geoWidth * scale) / 2;
-  const offsetY = (VIEW_HEIGHT - geoHeight * scale) / 2;
+  const offsetX = padding + (availableWidth - geoWidth * scale) / 2;
+  const offsetY = padding + (availableHeight - geoHeight * scale) / 2;
 
   const x = offsetX + (lng - minLng) * lngScale * scale;
   const y = VIEW_HEIGHT - (offsetY + (lat - minLat) * scale);
@@ -88,10 +93,12 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
+    svgRef,
   } = useZoomPan();
 
   return (
     <svg
+      ref={svgRef}
       width={VIEW_WIDTH}
       height={VIEW_HEIGHT}
       style={{
