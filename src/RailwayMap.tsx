@@ -182,36 +182,57 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
           // 経路が選択されている場合は経路のみ表示
           <>
             {selectedRoutes.map((route, routeIndex) => {
+              // 経路を路線ごとに分割
               const pathSegments: Array<{
                 stations: Array<{ name: string; lat: number; lng: number }>;
                 color: string;
+                lineName: string;
               }> = [];
+              
+              if (route.path.length === 0) return null;
               
               let currentSegment: Array<{ name: string; lat: number; lng: number }> = [];
               let currentLineName = route.path[0].lineName;
               
-              route.path.forEach((item, index) => {
-                if (item.lineName === currentLineName) {
-                  currentSegment.push(item.station);
-                } else {
-                  if (currentSegment.length > 0) {
-                    const lineData = lines[currentLineName as keyof typeof lines];
-                    pathSegments.push({
-                      stations: [...currentSegment],
-                      color: lineData?.color || '#000',
-                    });
-                  }
-                  currentSegment = [item.station];
-                  currentLineName = item.lineName;
-                }
+              // 最初の駅を追加
+              currentSegment.push(route.path[0].station);
+              
+              for (let i = 1; i < route.path.length; i++) {
+                const currentItem = route.path[i];
                 
-                if (index === route.path.length - 1 && currentSegment.length > 0) {
+                if (currentItem.lineName === currentLineName) {
+                  // 同じ路線の場合、駅を追加
+                  currentSegment.push(currentItem.station);
+                } else {
+                  // 路線が変わる場合
+                  // 現在の区間を保存
                   const lineData = lines[currentLineName as keyof typeof lines];
                   pathSegments.push({
-                    stations: currentSegment,
+                    stations: [...currentSegment],
                     color: lineData?.color || '#000',
+                    lineName: currentLineName,
                   });
+                  
+                  // 新しい区間を開始（乗り換え駅から）
+                  currentSegment = [currentItem.station];
+                  currentLineName = currentItem.lineName;
                 }
+              }
+              
+              // 最後の区間を保存
+              if (currentSegment.length > 0) {
+                const lineData = lines[currentLineName as keyof typeof lines];
+                pathSegments.push({
+                  stations: currentSegment,
+                  color: lineData?.color || '#000',
+                  lineName: currentLineName,
+                });
+              }
+              
+              console.log(`Route ${routeIndex + 1}: ${route.from} → ${route.to}`);
+              console.log('Original path:', route.path.map((p, i) => `${i}: ${p.station.name} (${p.lineName})`).join(' | '));
+              pathSegments.forEach((segment, idx) => {
+                console.log(`  Segment ${idx + 1} (${segment.lineName}):`, segment.stations.map(s => s.name).join(' → '));
               });
               
               return (

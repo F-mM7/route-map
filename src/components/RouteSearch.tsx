@@ -114,8 +114,10 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
     } else {
       // デバッグ用：経路の詳細をコンソールに出力
       routes.forEach((route, index) => {
-        console.log(`Route ${index + 1}: ${route.from} → ${route.to}`);
-        console.log('Path:', route.path.map(p => `${p.station.name} (${p.lineName})`));
+        console.log(`=== Route ${index + 1}: ${route.from} → ${route.to} ===`);
+        console.log('Full Path:', route.path.map((p, i) => `${i}: ${p.station.name} (${p.lineName})`).join(' → '));
+        console.log('Station Names Only:', route.path.map(p => p.station.name).join(' → '));
+        console.log('Transfers:', route.transfers);
         console.log('---');
       });
       onRoutesFound(routes);

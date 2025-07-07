@@ -142,18 +142,27 @@ export function findMinTransferRoute(fromStationName: string, toStationName: str
     transferGroup: TransferStation;
     path: Array<{ station: StationWithLine; lineName: string }>;
     transfers: number;
-    currentLine: string | null;
+    lastStation: StationWithLine;
   }> = [];
   
   const visited = new Set<TransferStation>();
   
-  // 始点からの初期化
-  fromGroup.stations.forEach(station => {
+  // 始点からの初期化 - 指定された駅名に一致する駅のみを使用
+  const startStations = fromGroup.stations.filter(s => s.name === fromStationName);
+  if (startStations.length === 0) {
+    return {
+      error: "指定された始点駅が見つかりません",
+      path: null,
+      transfers: null
+    };
+  }
+  
+  startStations.forEach(station => {
     queue.push({
       transferGroup: fromGroup,
       path: [{ station, lineName: station.lineName }],
       transfers: 0,
-      currentLine: station.lineName
+      lastStation: station
     });
   });
   
@@ -164,6 +173,52 @@ export function findMinTransferRoute(fromStationName: string, toStationName: str
     
     // 終点に到達
     if (current.transferGroup === toGroup) {
+      // 終点グループの中で実際の目的駅を見つける
+      const targetStation = toGroup.stations.find(s => s.name === toStationName);
+      if (targetStation) {
+        // 現在のパスの最後の駅から目的駅までの経路を補完
+        const lastPathItem = current.path[current.path.length - 1];
+        let finalPath = [...current.path];
+        
+        // 最後の駅と目的駅が異なる場合、経路を補完
+        if (lastPathItem.station.name !== targetStation.name) {
+          // 同じ乗り換えグループ内の駅を探す
+          const lastStation = toGroup.stations.find(s => 
+            s.name === lastPathItem.station.name && s.lineName === lastPathItem.lineName
+          );
+          const finalStation = toGroup.stations.find(s => 
+            s.name === targetStation.name
+          );
+          
+          if (lastStation && finalStation && lastStation.lineName === finalStation.lineName) {
+            // 同じ路線内で移動
+            const lineData = lines[lastStation.lineName as keyof typeof lines];
+            const lastIndex = lineData.stations.findIndex(s => s.name === lastStation.name);
+            const finalIndex = lineData.stations.findIndex(s => s.name === finalStation.name);
+            
+            if (lastIndex !== -1 && finalIndex !== -1) {
+              const start = Math.min(lastIndex, finalIndex);
+              const end = Math.max(lastIndex, finalIndex);
+              
+              // 最後の駅の次から目的駅まで追加
+              for (let i = start + 1; i <= end; i++) {
+                const station = lineData.stations[i];
+                finalPath.push({
+                  station: { ...station, lineName: lastStation.lineName },
+                  lineName: lastStation.lineName
+                });
+              }
+            }
+          }
+        }
+        
+        return {
+          path: finalPath,
+          transfers: current.transfers,
+          error: null
+        };
+      }
+      
       return {
         path: current.path,
         transfers: current.transfers,
@@ -173,6 +228,19 @@ export function findMinTransferRoute(fromStationName: string, toStationName: str
     
     // 現在の乗り換えグループから行ける次の駅を探索
     current.transferGroup.stations.forEach(currentStation => {
+      // 乗り換えが必要かチェック
+      const isTransfer = current.lastStation.lineName !== currentStation.lineName;
+      
+      // 乗り換えが必要な場合は、現在の駅を経路に追加
+      let pathToCurrentStation = [...current.path];
+      if (isTransfer) {
+        // 乗り換え駅を新しい路線として追加
+        pathToCurrentStation.push({
+          station: { ...currentStation, lineName: currentStation.lineName },
+          lineName: currentStation.lineName
+        });
+      }
+      
       const lineData = lines[currentStation.lineName as keyof typeof lines];
       const stationIndex = lineData.stations.findIndex(s => s.name === currentStation.name);
       
@@ -186,11 +254,10 @@ export function findMinTransferRoute(fromStationName: string, toStationName: str
         if (neighborGroup && !visited.has(neighborGroup)) {
           visited.add(neighborGroup);
           
-          const isTransfer = current.currentLine !== currentStation.lineName;
           const newTransfers = current.transfers + (isTransfer ? 1 : 0);
           
-          // 経路の完全な駅列を生成
-          let fullPath = [...current.path];
+          // 経路を構築：現在の駅から隣接駅までの全駅を追加
+          let newPath = [...pathToCurrentStation];
           
           // 現在の駅から隣接駅までの間の全駅を取得
           const currentIndex = lineData.stations.findIndex(s => s.name === currentStation.name);
@@ -199,39 +266,23 @@ export function findMinTransferRoute(fromStationName: string, toStationName: str
           if (currentIndex !== -1 && neighborIndex !== -1) {
             const start = Math.min(currentIndex, neighborIndex);
             const end = Math.max(currentIndex, neighborIndex);
+            const step = currentIndex < neighborIndex ? 1 : -1;
             
-            // 経路が空の場合（始点）は現在駅から開始
-            if (current.path.length === 1) {
-              fullPath = [{
-                station: { ...currentStation, lineName: currentStation.lineName },
+            // 現在駅の次の駅から隣接駅まで順番に追加
+            for (let i = currentIndex + step; i !== neighborIndex + step; i += step) {
+              const station = lineData.stations[i];
+              newPath.push({
+                station: { ...station, lineName: currentStation.lineName },
                 lineName: currentStation.lineName
-              }];
-              
-              // 現在駅から隣接駅まで全て追加
-              for (let i = start + 1; i <= end; i++) {
-                const station = lineData.stations[i];
-                fullPath.push({
-                  station: { ...station, lineName: currentStation.lineName },
-                  lineName: currentStation.lineName
-                });
-              }
-            } else {
-              // 現在駅の次の駅から隣接駅まで全て追加
-              for (let i = start + 1; i <= end; i++) {
-                const station = lineData.stations[i];
-                fullPath.push({
-                  station: { ...station, lineName: currentStation.lineName },
-                  lineName: currentStation.lineName
-                });
-              }
+              });
             }
           }
           
           queue.push({
             transferGroup: neighborGroup,
-            path: fullPath,
+            path: newPath,
             transfers: newTransfers,
-            currentLine: currentStation.lineName
+            lastStation: { ...neighbor, lineName: currentStation.lineName }
           });
         }
       });
