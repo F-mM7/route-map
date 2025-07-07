@@ -264,8 +264,6 @@ export function findMinTransferRoute(fromStationName: string, toStationName: str
           const neighborIndex = lineData.stations.findIndex(s => s.name === neighbor.name);
           
           if (currentIndex !== -1 && neighborIndex !== -1) {
-            const start = Math.min(currentIndex, neighborIndex);
-            const end = Math.max(currentIndex, neighborIndex);
             const step = currentIndex < neighborIndex ? 1 : -1;
             
             // 現在駅の次の駅から隣接駅まで順番に追加
@@ -293,6 +291,229 @@ export function findMinTransferRoute(fromStationName: string, toStationName: str
     error: "経路が見つかりません",
     path: null,
     transfers: null
+  };
+}
+
+// 最小乗り換え回数の全経路を検索
+export function findAllMinTransferRoutes(fromStationName: string, toStationName: string, distanceThreshold: number = 300) {
+  const transferGroups = buildTransferStations(distanceThreshold);
+  
+  // 始点と終点の乗り換えグループを検索
+  const fromGroup = findTransferGroup(fromStationName, transferGroups);
+  const toGroup = findTransferGroup(toStationName, transferGroups);
+  
+  if (!fromGroup || !toGroup) {
+    return {
+      error: "指定された駅が見つかりません",
+      fromFound: !!fromGroup,
+      toFound: !!toGroup,
+      routes: []
+    };
+  }
+  
+  // 同一路線内での直接経路をチェック
+  const directRoutes: Array<{ path: any[], transfers: number }> = [];
+  for (const fromStation of fromGroup.stations) {
+    for (const toStation of toGroup.stations) {
+      if (fromStation.lineName === toStation.lineName) {
+        const lineData = lines[fromStation.lineName as keyof typeof lines];
+        const fromIndex = lineData.stations.findIndex(s => s.name === fromStation.name);
+        const toIndex = lineData.stations.findIndex(s => s.name === toStation.name);
+        
+        if (fromIndex !== -1 && toIndex !== -1) {
+          const start = Math.min(fromIndex, toIndex);
+          const end = Math.max(fromIndex, toIndex);
+          const path = [];
+          
+          for (let i = start; i <= end; i++) {
+            const station = lineData.stations[i];
+            path.push({
+              station: { ...station, lineName: fromStation.lineName },
+              lineName: fromStation.lineName
+            });
+          }
+          
+          directRoutes.push({ path, transfers: 0 });
+        }
+      }
+    }
+  }
+  
+  if (directRoutes.length > 0) {
+    return {
+      routes: directRoutes,
+      minTransfers: 0,
+      error: null
+    };
+  }
+  
+  // BFSで最短乗り換え経路を全て検索
+  const queue: Array<{
+    transferGroup: TransferStation;
+    path: Array<{ station: StationWithLine; lineName: string }>;
+    transfers: number;
+    lastStation: StationWithLine;
+    visitedGroups: Set<TransferStation>;
+  }> = [];
+  
+  let minTransfers = Infinity;
+  const allRoutes: Array<{ path: any[], transfers: number }> = [];
+  
+  // 始点からの初期化
+  const startStations = fromGroup.stations.filter(s => s.name === fromStationName);
+  if (startStations.length === 0) {
+    return {
+      error: "指定された始点駅が見つかりません",
+      routes: [],
+      minTransfers: null
+    };
+  }
+  
+  startStations.forEach(station => {
+    const visitedGroups = new Set<TransferStation>();
+    visitedGroups.add(fromGroup);
+    queue.push({
+      transferGroup: fromGroup,
+      path: [{ station, lineName: station.lineName }],
+      transfers: 0,
+      lastStation: station,
+      visitedGroups
+    });
+  });
+  
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    
+    // 既に見つかった最小乗り換え回数より多い場合はスキップ
+    if (current.transfers > minTransfers) {
+      continue;
+    }
+    
+    // 終点に到達
+    if (current.transferGroup === toGroup) {
+      const targetStation = toGroup.stations.find(s => s.name === toStationName);
+      if (targetStation) {
+        const lastPathItem = current.path[current.path.length - 1];
+        let finalPath = [...current.path];
+        
+        if (lastPathItem.station.name !== targetStation.name) {
+          const lastStation = toGroup.stations.find(s => 
+            s.name === lastPathItem.station.name && s.lineName === lastPathItem.lineName
+          );
+          const finalStation = toGroup.stations.find(s => 
+            s.name === targetStation.name
+          );
+          
+          if (lastStation && finalStation && lastStation.lineName === finalStation.lineName) {
+            const lineData = lines[lastStation.lineName as keyof typeof lines];
+            const lastIndex = lineData.stations.findIndex(s => s.name === lastStation.name);
+            const finalIndex = lineData.stations.findIndex(s => s.name === finalStation.name);
+            
+            if (lastIndex !== -1 && finalIndex !== -1) {
+              const start = Math.min(lastIndex, finalIndex);
+              const end = Math.max(lastIndex, finalIndex);
+              
+              for (let i = start + 1; i <= end; i++) {
+                const station = lineData.stations[i];
+                finalPath.push({
+                  station: { ...station, lineName: lastStation.lineName },
+                  lineName: lastStation.lineName
+                });
+              }
+            }
+          }
+        }
+        
+        // 最小乗り換え回数を更新
+        if (current.transfers < minTransfers) {
+          minTransfers = current.transfers;
+          allRoutes.length = 0; // 古い経路をクリア
+        }
+        
+        // 同じ乗り換え回数の経路を追加
+        if (current.transfers === minTransfers) {
+          allRoutes.push({
+            path: finalPath,
+            transfers: current.transfers
+          });
+        }
+      }
+      continue;
+    }
+    
+    // 現在の乗り換えグループから行ける次の駅を探索
+    current.transferGroup.stations.forEach(currentStation => {
+      const isTransfer = current.lastStation.lineName !== currentStation.lineName;
+      
+      let pathToCurrentStation = [...current.path];
+      if (isTransfer) {
+        pathToCurrentStation.push({
+          station: { ...currentStation, lineName: currentStation.lineName },
+          lineName: currentStation.lineName
+        });
+      }
+      
+      const lineData = lines[currentStation.lineName as keyof typeof lines];
+      const stationIndex = lineData.stations.findIndex(s => s.name === currentStation.name);
+      
+      const neighbors: Station[] = [];
+      if (stationIndex > 0) neighbors.push(lineData.stations[stationIndex - 1]);
+      if (stationIndex < lineData.stations.length - 1) neighbors.push(lineData.stations[stationIndex + 1]);
+      
+      neighbors.forEach(neighbor => {
+        const neighborGroup = findTransferGroup(neighbor.name, transferGroups);
+        if (neighborGroup && !current.visitedGroups.has(neighborGroup)) {
+          const newVisitedGroups = new Set(current.visitedGroups);
+          newVisitedGroups.add(neighborGroup);
+          
+          const newTransfers = current.transfers + (isTransfer ? 1 : 0);
+          
+          // 既に見つかった最小乗り換え回数より多い場合はスキップ
+          if (newTransfers > minTransfers) {
+            return;
+          }
+          
+          let newPath = [...pathToCurrentStation];
+          
+          const currentIndex = lineData.stations.findIndex(s => s.name === currentStation.name);
+          const neighborIndex = lineData.stations.findIndex(s => s.name === neighbor.name);
+          
+          if (currentIndex !== -1 && neighborIndex !== -1) {
+            const step = currentIndex < neighborIndex ? 1 : -1;
+            
+            for (let i = currentIndex + step; i !== neighborIndex + step; i += step) {
+              const station = lineData.stations[i];
+              newPath.push({
+                station: { ...station, lineName: currentStation.lineName },
+                lineName: currentStation.lineName
+              });
+            }
+          }
+          
+          queue.push({
+            transferGroup: neighborGroup,
+            path: newPath,
+            transfers: newTransfers,
+            lastStation: { ...neighbor, lineName: currentStation.lineName },
+            visitedGroups: newVisitedGroups
+          });
+        }
+      });
+    });
+  }
+  
+  if (allRoutes.length === 0) {
+    return {
+      error: "経路が見つかりません",
+      routes: [],
+      minTransfers: null
+    };
+  }
+  
+  return {
+    routes: allRoutes,
+    minTransfers,
+    error: null
   };
 }
 

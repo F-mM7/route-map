@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { findMinTransferRoute, getStationNames } from '../utils/routeFinder';
+import { findAllMinTransferRoutes, getStationNames } from '../utils/routeFinder';
 import { colors, fontSize, spacing, borderRadius } from '../styles/constants';
 
 interface Route {
@@ -96,14 +96,17 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
     
     for (let i = 0; i < stations.length; i++) {
       for (let j = i + 1; j < stations.length; j++) {
-        const routeResult = findMinTransferRoute(stations[i], stations[j], distanceThreshold);
+        const routeResult = findAllMinTransferRoutes(stations[i], stations[j], distanceThreshold);
         
-        if (!routeResult.error && routeResult.path) {
-          routes.push({
-            from: stations[i],
-            to: stations[j],
-            path: routeResult.path,
-            transfers: routeResult.transfers || 0
+        if (!routeResult.error && routeResult.routes.length > 0) {
+          // 全ての最小乗り換え経路を追加
+          routeResult.routes.forEach((route) => {
+            routes.push({
+              from: stations[i],
+              to: stations[j],
+              path: route.path,
+              transfers: route.transfers
+            });
           });
         }
       }
