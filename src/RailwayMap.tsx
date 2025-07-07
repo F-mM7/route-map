@@ -34,10 +34,46 @@ function getLatLngBounds() {
   return { minLat, maxLat, minLng, maxLng };
 }
 
+function getRouteBounds(routes: Array<{
+  from: string;
+  to: string;
+  path: Array<{
+    station: {
+      name: string;
+      lat: number;
+      lng: number;
+      lineName: string;
+    };
+    lineName: string;
+  }>;
+  transfers: number;
+}>) {
+  if (routes.length === 0) {
+    return getLatLngBounds();
+  }
+  
+  let minLat = Infinity,
+    maxLat = -Infinity,
+    minLng = Infinity,
+    maxLng = -Infinity;
+  
+  routes.forEach(route => {
+    route.path.forEach(pathItem => {
+      const station = pathItem.station;
+      if (station.lat < minLat) minLat = station.lat;
+      if (station.lat > maxLat) maxLat = station.lat;
+      if (station.lng < minLng) minLng = station.lng;
+      if (station.lng > maxLng) maxLng = station.lng;
+    });
+  });
+  
+  return { minLat, maxLat, minLng, maxLng };
+}
+
 const bounds = getLatLngBounds();
 
-function latLngToSvg(lat: number, lng: number) {
-  const { minLat, maxLat, minLng, maxLng } = bounds;
+function latLngToSvg(lat: number, lng: number, customBounds?: { minLat: number; maxLat: number; minLng: number; maxLng: number }) {
+  const { minLat, maxLat, minLng, maxLng } = customBounds || bounds;
   const latCenter = (minLat + maxLat) / 2;
   const lngScale = Math.cos((latCenter * Math.PI) / 180);
 
@@ -95,6 +131,10 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
     handleMouseUp,
     svgRef,
   } = useZoomPan();
+
+  // 経路選択時の描画範囲を計算
+  const routeBounds = selectedRoutes.length > 0 ? getRouteBounds(selectedRoutes) : null;
+  const latLngToSvgWithBounds = (lat: number, lng: number) => latLngToSvg(lat, lng, routeBounds);
 
   return (
     <svg
@@ -181,7 +221,7 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
                       key={`route-${routeIndex}-segment-${segmentIndex}`}
                       color={segment.color}
                       stations={segment.stations}
-                      latLngToSvg={latLngToSvg}
+                      latLngToSvg={latLngToSvgWithBounds}
                       strokeWidth={6}
                     />
                   ))}
@@ -236,12 +276,12 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
                 <>
                   <StationMarkers
                     stationList={displayStations}
-                    latLngToSvg={latLngToSvg}
+                    latLngToSvg={latLngToSvgWithBounds}
                     backgroundColor={backgroundColor}
                   />
                   <StationLabels
                     stationList={displayStations}
-                    latLngToSvg={latLngToSvg}
+                    latLngToSvg={latLngToSvgWithBounds}
                     textColor={textColor}
                   />
                 </>
