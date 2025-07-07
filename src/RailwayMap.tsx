@@ -134,7 +134,7 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
 
   // 経路選択時の描画範囲を計算
   const routeBounds = selectedRoutes.length > 0 ? getRouteBounds(selectedRoutes) : null;
-  const latLngToSvgWithBounds = (lat: number, lng: number) => latLngToSvg(lat, lng, routeBounds);
+  const latLngToSvgWithBounds = (lat: number, lng: number) => latLngToSvg(lat, lng, routeBounds || undefined);
 
   return (
     <svg

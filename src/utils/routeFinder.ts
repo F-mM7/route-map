@@ -88,16 +88,7 @@ function findTransferGroup(stationName: string, transferGroups: TransferStation[
 }
 
 // 路線グラフを構築
-interface RouteNode {
-  station: StationWithLine;
-  transferGroup: TransferStation;
-}
 
-interface RouteEdge {
-  from: RouteNode;
-  to: RouteNode;
-  isTransfer: boolean;
-}
 
 // 最短乗り換え経路を検索（BFS）
 export function findMinTransferRoute(fromStationName: string, toStationName: string, distanceThreshold: number = 300) {

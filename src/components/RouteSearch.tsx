@@ -98,11 +98,12 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
       for (let j = i + 1; j < stations.length; j++) {
         const routeResult = findMinTransferRoute(stations[i], stations[j], distanceThreshold);
         
-        if (!routeResult.error) {
+        if (!routeResult.error && routeResult.path) {
           routes.push({
             from: stations[i],
             to: stations[j],
-            ...routeResult
+            path: routeResult.path,
+            transfers: routeResult.transfers || 0
           });
         }
       }
@@ -121,9 +122,6 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
     }
   };
 
-  const handleSearch = () => {
-    performSearch(selectedStations);
-  };
 
   // 外側をクリックしたときに候補を非表示
   useEffect(() => {
@@ -206,7 +204,7 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
               style={{
                 padding: `${spacing.xs} ${spacing.sm}`,
                 fontSize: fontSize.small,
-                backgroundColor: colors.button.secondary || '#f5f5f5',
+                backgroundColor: colors.background.secondary,
                 color: colors.text.secondary,
                 border: '1px solid #ddd',
                 borderRadius: borderRadius.small,
