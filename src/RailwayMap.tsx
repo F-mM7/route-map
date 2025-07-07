@@ -182,20 +182,39 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
               );
             })}
             
-            {/* 経路上の駅のみマーカーとラベルを表示 */}
+            {/* 乗り換え駅と終端駅のみマーカーとラベルを表示 */}
             {(() => {
-              const uniqueStations = new Map<string, StationWithLine>();
+              const transferAndEndStations = new Map<string, StationWithLine>();
               
               selectedRoutes.forEach(route => {
-                route.path.forEach(item => {
-                  const key = `${item.station.name}-${item.station.lat}-${item.station.lng}`;
-                  if (!uniqueStations.has(key)) {
-                    uniqueStations.set(key, item.station);
+                // 各経路の始点と終点を追加
+                if (route.path.length > 0) {
+                  const firstStation = route.path[0].station;
+                  const lastStation = route.path[route.path.length - 1].station;
+                  
+                  const firstKey = `${firstStation.name}-${firstStation.lat}-${firstStation.lng}`;
+                  const lastKey = `${lastStation.name}-${lastStation.lat}-${lastStation.lng}`;
+                  
+                  transferAndEndStations.set(firstKey, firstStation);
+                  transferAndEndStations.set(lastKey, lastStation);
+                }
+                
+                // 乗り換え駅を検出（路線名が変わる箇所）
+                for (let i = 1; i < route.path.length; i++) {
+                  if (route.path[i].lineName !== route.path[i - 1].lineName) {
+                    const transferStation = route.path[i].station;
+                    const key = `${transferStation.name}-${transferStation.lat}-${transferStation.lng}`;
+                    transferAndEndStations.set(key, transferStation);
+                    
+                    // 乗り換え前の駅も追加
+                    const prevStation = route.path[i - 1].station;
+                    const prevKey = `${prevStation.name}-${prevStation.lat}-${prevStation.lng}`;
+                    transferAndEndStations.set(prevKey, prevStation);
                   }
-                });
+                }
               });
               
-              const routeStations = Array.from(uniqueStations.values()).map(station => {
+              const displayStations = Array.from(transferAndEndStations.values()).map(station => {
                 const lineData = lines[station.lineName as keyof typeof lines];
                 return {
                   name: station.name,
@@ -209,12 +228,12 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
               return (
                 <>
                   <StationMarkers
-                    stationList={routeStations}
+                    stationList={displayStations}
                     latLngToSvg={latLngToSvg}
                     backgroundColor={backgroundColor}
                   />
                   <StationLabels
-                    stationList={routeStations}
+                    stationList={displayStations}
                     latLngToSvg={latLngToSvg}
                     textColor={textColor}
                   />
