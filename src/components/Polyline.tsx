@@ -9,12 +9,16 @@ type PolylineProps = {
   color: string;
   stations: Station[];
   latLngToSvg: (lat: number, lng: number) => { x: number; y: number };
+  strokeWidth?: number;
+  opacity?: number;
 };
 
 const Polyline: React.FC<PolylineProps> = ({
   color,
   stations,
   latLngToSvg,
+  strokeWidth = 4,
+  opacity = 1,
 }) => {
   const points = stations
     .map((station) => {
@@ -24,7 +28,13 @@ const Polyline: React.FC<PolylineProps> = ({
     .join(" ");
 
   return (
-    <polyline fill="none" stroke={color} strokeWidth={4} points={points} />
+    <polyline 
+      fill="none" 
+      stroke={color} 
+      strokeWidth={strokeWidth} 
+      points={points} 
+      opacity={opacity}
+    />
   );
 };
 

@@ -5,12 +5,14 @@ type StationMarkersProps = {
   stationList: Station[];
   latLngToSvg: (lat: number, lng: number) => { x: number; y: number };
   backgroundColor: string;
+  opacity?: number;
 };
 
 const StationMarkers: React.FC<StationMarkersProps> = ({
   stationList,
   latLngToSvg,
   backgroundColor,
+  opacity = 1,
 }) => {
   return (
     <>
@@ -21,10 +23,11 @@ const StationMarkers: React.FC<StationMarkersProps> = ({
             <circle
               cx={x}
               cy={y}
-              r={8}
+              r={7}
               fill={backgroundColor}
               stroke={station.color}
-              strokeWidth={3}
+              strokeWidth={2.5}
+              opacity={opacity}
             />
           </g>
         );
