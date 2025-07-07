@@ -115,6 +115,37 @@ export function findMinTransferRoute(fromStationName: string, toStationName: str
     };
   }
   
+  // 同一路線内での直接経路をチェック
+  for (const fromStation of fromGroup.stations) {
+    for (const toStation of toGroup.stations) {
+      if (fromStation.lineName === toStation.lineName) {
+        const lineData = lines[fromStation.lineName as keyof typeof lines];
+        const fromIndex = lineData.stations.findIndex(s => s.name === fromStation.name);
+        const toIndex = lineData.stations.findIndex(s => s.name === toStation.name);
+        
+        if (fromIndex !== -1 && toIndex !== -1) {
+          const start = Math.min(fromIndex, toIndex);
+          const end = Math.max(fromIndex, toIndex);
+          const path = [];
+          
+          for (let i = start; i <= end; i++) {
+            const station = lineData.stations[i];
+            path.push({
+              station: { ...station, lineName: fromStation.lineName },
+              lineName: fromStation.lineName
+            });
+          }
+          
+          return {
+            path,
+            transfers: 0,
+            error: null
+          };
+        }
+      }
+    }
+  }
+  
   // BFSで最短乗り換え経路を検索
   const queue: Array<{
     transferGroup: TransferStation;
@@ -154,7 +185,7 @@ export function findMinTransferRoute(fromStationName: string, toStationName: str
       const lineData = lines[currentStation.lineName as keyof typeof lines];
       const stationIndex = lineData.stations.findIndex(s => s.name === currentStation.name);
       
-      // 同じ路線の前後の駅
+      // 同じ路線の前後の駅のみを隣接として扱う
       const neighbors: Station[] = [];
       if (stationIndex > 0) neighbors.push(lineData.stations[stationIndex - 1]);
       if (stationIndex < lineData.stations.length - 1) neighbors.push(lineData.stations[stationIndex + 1]);
@@ -167,12 +198,47 @@ export function findMinTransferRoute(fromStationName: string, toStationName: str
           const isTransfer = current.currentLine !== currentStation.lineName;
           const newTransfers = current.transfers + (isTransfer ? 1 : 0);
           
+          // 経路の完全な駅列を生成
+          let fullPath = [...current.path];
+          
+          // 現在の駅から隣接駅までの間の全駅を取得
+          const currentIndex = lineData.stations.findIndex(s => s.name === currentStation.name);
+          const neighborIndex = lineData.stations.findIndex(s => s.name === neighbor.name);
+          
+          if (currentIndex !== -1 && neighborIndex !== -1) {
+            const start = Math.min(currentIndex, neighborIndex);
+            const end = Math.max(currentIndex, neighborIndex);
+            
+            // 経路が空の場合（始点）は現在駅から開始
+            if (current.path.length === 1) {
+              fullPath = [{
+                station: { ...currentStation, lineName: currentStation.lineName },
+                lineName: currentStation.lineName
+              }];
+              
+              // 現在駅から隣接駅まで全て追加
+              for (let i = start + 1; i <= end; i++) {
+                const station = lineData.stations[i];
+                fullPath.push({
+                  station: { ...station, lineName: currentStation.lineName },
+                  lineName: currentStation.lineName
+                });
+              }
+            } else {
+              // 現在駅の次の駅から隣接駅まで全て追加
+              for (let i = start + 1; i <= end; i++) {
+                const station = lineData.stations[i];
+                fullPath.push({
+                  station: { ...station, lineName: currentStation.lineName },
+                  lineName: currentStation.lineName
+                });
+              }
+            }
+          }
+          
           queue.push({
             transferGroup: neighborGroup,
-            path: [...current.path, { 
-              station: { ...neighbor, lineName: currentStation.lineName }, 
-              lineName: currentStation.lineName 
-            }],
+            path: fullPath,
             transfers: newTransfers,
             currentLine: currentStation.lineName
           });

@@ -94,6 +94,12 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
     if (routes.length === 0) {
       setError('有効な経路が見つかりませんでした');
     } else {
+      // デバッグ用：経路の詳細をコンソールに出力
+      routes.forEach((route, index) => {
+        console.log(`Route ${index + 1}: ${route.from} → ${route.to}`);
+        console.log('Path:', route.path.map(p => `${p.station.name} (${p.lineName})`));
+        console.log('---');
+      });
       onRoutesFound(routes);
     }
   };
