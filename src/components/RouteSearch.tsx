@@ -55,9 +55,9 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
       const newStations = [...selectedStations, station];
       setSelectedStations(newStations);
       
-      // 自動検索実行
+      // 自動検索実行（コンソール出力付き）
       if (newStations.length >= 2) {
-        performSearch(newStations);
+        performSearch(newStations, true);
       }
     }
     setInputValue('');
@@ -72,8 +72,8 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
     if (newStations.length < 2) {
       onRoutesFound([]);
     } else {
-      // 残りの駅で自動検索実行
-      performSearch(newStations);
+      // 残りの駅で自動検索実行（コンソール出力付き）
+      performSearch(newStations, true);
     }
   };
 
@@ -83,7 +83,7 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
     onRoutesFound([]);
   };
 
-  const performSearch = (stations: string[]) => {
+  const performSearch = (stations: string[], logToConsole: boolean = false) => {
     if (stations.length < 2) {
       setError('2つ以上の駅を選択してください');
       return;
@@ -115,18 +115,27 @@ const RouteSearch: React.FC<RouteSearchProps> = ({ onRoutesFound, distanceThresh
     if (routes.length === 0) {
       setError('有効な経路が見つかりませんでした');
     } else {
-      // デバッグ用：経路の詳細をコンソールに出力
-      routes.forEach((route, index) => {
-        console.log(`=== Route ${index + 1}: ${route.from} → ${route.to} ===`);
-        console.log('Full Path:', route.path.map((p, i) => `${i}: ${p.station.name} (${p.lineName})`).join(' → '));
-        console.log('Station Names Only:', route.path.map(p => p.station.name).join(' → '));
-        console.log('Transfers:', route.transfers);
-        console.log('---');
-      });
+      // 駅選択時のみコンソールに出力
+      if (logToConsole) {
+        routes.forEach((route, index) => {
+          console.log(`=== Route ${index + 1}: ${route.from} → ${route.to} ===`);
+          console.log('Full Path:', route.path.map((p, i) => `${i}: ${p.station.name} (${p.lineName})`).join(' → '));
+          console.log('Station Names Only:', route.path.map(p => p.station.name).join(' → '));
+          console.log('Transfers:', route.transfers);
+          console.log('---');
+        });
+      }
       onRoutesFound(routes);
     }
   };
 
+
+  // 初期選択駅での自動検索（コンソール出力なし）
+  useEffect(() => {
+    if (selectedStations.length >= 2) {
+      performSearch(selectedStations, false);
+    }
+  }, []); // コンポーネントマウント時のみ実行
 
   // 外側をクリックしたときに候補を非表示
   useEffect(() => {

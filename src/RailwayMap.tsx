@@ -229,12 +229,6 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
                 });
               }
               
-              console.log(`Route ${routeIndex + 1}: ${route.from} → ${route.to}`);
-              console.log('Original path:', route.path.map((p, i) => `${i}: ${p.station.name} (${p.lineName})`).join(' | '));
-              pathSegments.forEach((segment, idx) => {
-                console.log(`  Segment ${idx + 1} (${segment.lineName}):`, segment.stations.map(s => s.name).join(' → '));
-              });
-              
               return (
                 <g key={`route-${routeIndex}`}>
                   {pathSegments.map((segment, segmentIndex) => (

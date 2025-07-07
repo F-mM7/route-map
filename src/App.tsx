@@ -1,27 +1,9 @@
 import "./App.css";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import RailwayMap from "./RailwayMap";
 import RouteSearch from "./components/RouteSearch";
-import lines from "./lines";
 import { spacing, colors } from "./styles/constants";
 
-const stations = Object.values(lines).flatMap((line) => line.stations);
-
-function calcDistance(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number }
-) {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const dLat = lat2 - lat1;
-  const dLng = toRad(b.lng - a.lng);
-  const avgLat = (lat1 + lat2) / 2;
-  const R = 6378137;
-  const x = dLng * Math.cos(avgLat) * R;
-  const y = dLat * R;
-  return Math.sqrt(x * x + y * y);
-}
 
 function App() {
   const [selectedRoutes, setSelectedRoutes] = useState<Array<{
@@ -41,18 +23,6 @@ function App() {
 
   const [distanceThreshold, setDistanceThreshold] = useState(300);
 
-  useEffect(() => {
-    for (let i = 0; i < stations.length; i++) {
-      for (let j = i + 1; j < stations.length; j++) {
-        const dist = calcDistance(stations[i], stations[j]);
-        if (dist < distanceThreshold) {
-          console.log(
-            `近い駅ペア: ${stations[i].name} - ${stations[j].name} (距離: ${dist})`
-          );
-        }
-      }
-    }
-  }, [distanceThreshold]);
 
   const handleRoutesFound = (routes: Array<{
     from: string;
