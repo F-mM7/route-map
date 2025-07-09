@@ -146,6 +146,72 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
     svgRef,
   } = useZoomPan();
 
+  const createCleanSVG = () => {
+    if (!svgRef.current) return null;
+    
+    const svgElement = svgRef.current.cloneNode(true) as SVGElement;
+    svgElement.style.border = 'none';
+    svgElement.style.borderRadius = '0';
+    svgElement.style.boxShadow = 'none';
+    
+    return svgElement;
+  };
+
+  const downloadAsPNG = () => {
+    const cleanSVG = createCleanSVG();
+    if (!cleanSVG) return;
+    
+    const svgData = new XMLSerializer().serializeToString(cleanSVG);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return;
+    
+    canvas.width = VIEW_WIDTH;
+    canvas.height = VIEW_HEIGHT;
+    
+    const img = new Image();
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0);
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = 'railway-map.png';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      }, 'image/png');
+      
+      URL.revokeObjectURL(url);
+    };
+    
+    img.src = url;
+  };
+
+  const downloadAsSVG = () => {
+    const cleanSVG = createCleanSVG();
+    if (!cleanSVG) return;
+    
+    const svgData = new XMLSerializer().serializeToString(cleanSVG);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'railway-map.svg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    URL.revokeObjectURL(url);
+  };
+
   // 経路選択時の描画範囲を計算
   const routeBounds =
     selectedRoutes.length > 0 ? getRouteBounds(selectedRoutes) : null;
@@ -153,23 +219,59 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
     latLngToSvg(lat, lng, routeBounds || undefined);
 
   return (
-    <svg
-      ref={svgRef}
-      width={VIEW_WIDTH}
-      height={VIEW_HEIGHT}
-      style={{
-        background: backgroundColor,
-        cursor: dragging ? "grabbing" : "grab",
-        userSelect: "none",
-        border: "1px solid #e0e0e0",
-        borderRadius: "8px",
-        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-      }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-    >
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
+        <button
+          onClick={downloadAsPNG}
+          style={{
+            marginRight: '8px',
+            padding: '8px 12px',
+            background: '#2563eb',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          PNG
+        </button>
+        <button
+          onClick={downloadAsSVG}
+          style={{
+            padding: '8px 12px',
+            background: '#059669',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          SVG
+        </button>
+      </div>
+      <svg
+        ref={svgRef}
+        width={VIEW_WIDTH}
+        height={VIEW_HEIGHT}
+        style={{
+          background: backgroundColor,
+          cursor: dragging ? "grabbing" : "grab",
+          userSelect: "none",
+          border: "1px solid #e0e0e0",
+          borderRadius: "8px",
+          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
       <g
         transform={`translate(${VIEW_WIDTH / 2},${
           VIEW_HEIGHT / 2
@@ -334,6 +436,7 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
         )}
       </g>
     </svg>
+    </div>
   );
 };
 
