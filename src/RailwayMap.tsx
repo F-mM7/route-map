@@ -15,8 +15,8 @@ interface StationWithLine {
 
 const VIEW_WIDTH = 1024;
 const VIEW_HEIGHT = 1024;
-const backgroundColor = "white";
-const textColor = "#333333";
+const backgroundColor = "transparent";
+const textColor = "black";
 
 function getLatLngBounds() {
   let minLat = Infinity,
@@ -34,31 +34,33 @@ function getLatLngBounds() {
   return { minLat, maxLat, minLng, maxLng };
 }
 
-function getRouteBounds(routes: Array<{
-  from: string;
-  to: string;
-  path: Array<{
-    station: {
-      name: string;
-      lat: number;
-      lng: number;
+function getRouteBounds(
+  routes: Array<{
+    from: string;
+    to: string;
+    path: Array<{
+      station: {
+        name: string;
+        lat: number;
+        lng: number;
+        lineName: string;
+      };
       lineName: string;
-    };
-    lineName: string;
-  }>;
-  transfers: number;
-}>) {
+    }>;
+    transfers: number;
+  }>
+) {
   if (routes.length === 0) {
     return getLatLngBounds();
   }
-  
+
   let minLat = Infinity,
     maxLat = -Infinity,
     minLng = Infinity,
     maxLng = -Infinity;
-  
-  routes.forEach(route => {
-    route.path.forEach(pathItem => {
+
+  routes.forEach((route) => {
+    route.path.forEach((pathItem) => {
       const station = pathItem.station;
       if (station.lat < minLat) minLat = station.lat;
       if (station.lat > maxLat) maxLat = station.lat;
@@ -66,25 +68,37 @@ function getRouteBounds(routes: Array<{
       if (station.lng > maxLng) maxLng = station.lng;
     });
   });
-  
+
   return { minLat, maxLat, minLng, maxLng };
 }
 
 const bounds = getLatLngBounds();
 
-function latLngToSvg(lat: number, lng: number, customBounds?: { minLat: number; maxLat: number; minLng: number; maxLng: number }) {
+function latLngToSvg(
+  lat: number,
+  lng: number,
+  customBounds?: {
+    minLat: number;
+    maxLat: number;
+    minLng: number;
+    maxLng: number;
+  }
+) {
   const { minLat, maxLat, minLng, maxLng } = customBounds || bounds;
   const latCenter = (minLat + maxLat) / 2;
   const lngScale = Math.cos((latCenter * Math.PI) / 180);
 
   const geoWidth = (maxLng - minLng) * lngScale;
   const geoHeight = maxLat - minLat;
-  
+
   const padding = 80;
   const availableWidth = VIEW_WIDTH - padding * 2;
   const availableHeight = VIEW_HEIGHT - padding * 2;
-  
-  const scale = Math.min(availableWidth / geoWidth, availableHeight / geoHeight);
+
+  const scale = Math.min(
+    availableWidth / geoWidth,
+    availableHeight / geoHeight
+  );
 
   const offsetX = padding + (availableWidth - geoWidth * scale) / 2;
   const offsetY = padding + (availableHeight - geoHeight * scale) / 2;
@@ -133,8 +147,10 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
   } = useZoomPan();
 
   // 経路選択時の描画範囲を計算
-  const routeBounds = selectedRoutes.length > 0 ? getRouteBounds(selectedRoutes) : null;
-  const latLngToSvgWithBounds = (lat: number, lng: number) => latLngToSvg(lat, lng, routeBounds || undefined);
+  const routeBounds =
+    selectedRoutes.length > 0 ? getRouteBounds(selectedRoutes) : null;
+  const latLngToSvgWithBounds = (lat: number, lng: number) =>
+    latLngToSvg(lat, lng, routeBounds || undefined);
 
   return (
     <svg
@@ -154,7 +170,13 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      <g transform={`translate(${VIEW_WIDTH/2},${VIEW_HEIGHT/2}) scale(${zoom}) translate(${-VIEW_WIDTH/2 + offset.x},${-VIEW_HEIGHT/2 + offset.y})`}>
+      <g
+        transform={`translate(${VIEW_WIDTH / 2},${
+          VIEW_HEIGHT / 2
+        }) scale(${zoom}) translate(${-VIEW_WIDTH / 2 + offset.x},${
+          -VIEW_HEIGHT / 2 + offset.y
+        })`}
+      >
         {selectedRoutes.length === 0 ? (
           // 経路が選択されていない場合は全路線を表示
           <>
@@ -188,18 +210,22 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
                 color: string;
                 lineName: string;
               }> = [];
-              
+
               if (route.path.length === 0) return null;
-              
-              let currentSegment: Array<{ name: string; lat: number; lng: number }> = [];
+
+              let currentSegment: Array<{
+                name: string;
+                lat: number;
+                lng: number;
+              }> = [];
               let currentLineName = route.path[0].lineName;
-              
+
               // 最初の駅を追加
               currentSegment.push(route.path[0].station);
-              
+
               for (let i = 1; i < route.path.length; i++) {
                 const currentItem = route.path[i];
-                
+
                 if (currentItem.lineName === currentLineName) {
                   // 同じ路線の場合、駅を追加
                   currentSegment.push(currentItem.station);
@@ -209,26 +235,26 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
                   const lineData = lines[currentLineName as keyof typeof lines];
                   pathSegments.push({
                     stations: [...currentSegment],
-                    color: lineData?.color || '#000',
+                    color: lineData?.color || "#000",
                     lineName: currentLineName,
                   });
-                  
+
                   // 新しい区間を開始（乗り換え駅から）
                   currentSegment = [currentItem.station];
                   currentLineName = currentItem.lineName;
                 }
               }
-              
+
               // 最後の区間を保存
               if (currentSegment.length > 0) {
                 const lineData = lines[currentLineName as keyof typeof lines];
                 pathSegments.push({
                   stations: currentSegment,
-                  color: lineData?.color || '#000',
+                  color: lineData?.color || "#000",
                   lineName: currentLineName,
                 });
               }
-              
+
               return (
                 <g key={`route-${routeIndex}`}>
                   {pathSegments.map((segment, segmentIndex) => (
@@ -243,31 +269,31 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
                 </g>
               );
             })}
-            
+
             {/* 乗り換え駅と終端駅のみマーカーとラベルを表示 */}
             {(() => {
               const transferAndEndStations = new Map<string, StationWithLine>();
-              
-              selectedRoutes.forEach(route => {
+
+              selectedRoutes.forEach((route) => {
                 // 各経路の始点と終点を追加
                 if (route.path.length > 0) {
                   const firstStation = route.path[0].station;
                   const lastStation = route.path[route.path.length - 1].station;
-                  
+
                   const firstKey = `${firstStation.name}-${firstStation.lat}-${firstStation.lng}`;
                   const lastKey = `${lastStation.name}-${lastStation.lat}-${lastStation.lng}`;
-                  
+
                   transferAndEndStations.set(firstKey, firstStation);
                   transferAndEndStations.set(lastKey, lastStation);
                 }
-                
+
                 // 乗り換え駅を検出（路線名が変わる箇所）
                 for (let i = 1; i < route.path.length; i++) {
                   if (route.path[i].lineName !== route.path[i - 1].lineName) {
                     const transferStation = route.path[i].station;
                     const key = `${transferStation.name}-${transferStation.lat}-${transferStation.lng}`;
                     transferAndEndStations.set(key, transferStation);
-                    
+
                     // 乗り換え前の駅も追加
                     const prevStation = route.path[i - 1].station;
                     const prevKey = `${prevStation.name}-${prevStation.lat}-${prevStation.lng}`;
@@ -275,18 +301,20 @@ const RailwayMap: React.FC<RailwayMapProps> = ({ selectedRoutes = [] }) => {
                   }
                 }
               });
-              
-              const displayStations = Array.from(transferAndEndStations.values()).map(station => {
+
+              const displayStations = Array.from(
+                transferAndEndStations.values()
+              ).map((station) => {
                 const lineData = lines[station.lineName as keyof typeof lines];
                 return {
                   name: station.name,
                   lat: station.lat,
                   lng: station.lng,
                   line: station.lineName,
-                  color: lineData?.color || '#000',
+                  color: lineData?.color || "#000",
                 };
               });
-              
+
               return (
                 <>
                   <StationMarkers
