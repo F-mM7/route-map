@@ -1,6 +1,6 @@
 const marounochiLine = {
   name: "丸ノ内線",
-  color: "#f62e36",
+  color: "#E24340",
   stations: [
     { name: "荻窪", lat: 35.7050, lng: 139.6188 },
     { name: "南阿佐ケ谷", lat: 35.7059, lng: 139.6350 },

@@ -1,6 +1,6 @@
 const mitaLine = {
   name: "三田線",
-  color: "#0072bc",
+  color: "#0079c2",
   stations: [
     { name: "目黒", lat: 35.633998, lng: 139.715719 },
     { name: "白金台", lat: 35.638202, lng: 139.726136 },

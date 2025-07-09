@@ -1,6 +1,6 @@
 const inokashiraLine = {
   name: "井の頭線",
-  color: "#e9546b",
+  color: "#003f8c",
   stations: [
     { name: "渋谷", lat: 35.658034, lng: 139.701636 },
     { name: "神泉", lat: 35.656003, lng: 139.692003 },
